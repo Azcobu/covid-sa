@@ -44,15 +44,15 @@ def plot(indata):
     dates = list(indata.keys())
     days = list(range(len(cases)))
 
-    currmodel = 'logistic'
-    #currmodel = 'exponential'
+    #currmodel = 'logistic'
+    currmodel = 'exponential'
     #currmodel = 'simple_exp'
 
-    logi_popt, logi_pcov = fit_curve(days, cases, 'logistic')
-    #expo_popt, expo_pcov = fit_curve(days, cases, 'exponential')
+    #logi_popt, logi_pcov = fit_curve(days, cases, 'logistic')
+    expo_popt, expo_pcov = fit_curve(days, cases, 'exponential')
 
-    logi_fit_y, logi_extrap_x, logi_extrap_y, needs_ic = extrapolate('logistic', days, logi_popt, advance_days)
-    #expo_fit_y, expo_extrap_x, expo_extrap_y, needs_ic = extrapolate('exponential', days, expo_popt, advance_days)
+    #logi_fit_y, logi_extrap_x, logi_extrap_y, needs_ic = extrapolate('logistic', days, logi_popt, advance_days)
+    expo_fit_y, expo_extrap_x, expo_extrap_y, needs_ic = extrapolate('exponential', days, expo_popt, advance_days)
 
     fig, ax = plt.subplots()
 
@@ -60,8 +60,8 @@ def plot(indata):
     ax.plot(dates, cases, '-bx', label='Cases')
 
     #logistic curve
-    ax.plot(days, logi_fit_y, '--g', label='Logistic fitted curve')
-    #ax.plot(logi_extrap_x, logi_extrap_y, '--xg', label='Logistic extrapolated')
+    #ax.plot(days, logi_fit_y, '--g', label='Logistic fitted curve')
+    ax.plot(logi_extrap_x, logi_extrap_y, '--xg', label='Exponential extrapolated')
     # label extrapolated points
     '''
     for num, x in enumerate(logi_extrap_x[1:]): #skip first extrap as it overlaps last datum
