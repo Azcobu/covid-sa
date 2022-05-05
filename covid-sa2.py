@@ -10,7 +10,6 @@ def logistic_model(x, a, b, c):
     return c / (1 + np.exp(-(x - b) / a))
 
 def exponential_model(x, a, b, c, d, e):
-    #return a*np.exp(b*(x-c))
     return a * x**4 + b * x**3 + c * x**2 + d * x + e
 
 def plot(data):
