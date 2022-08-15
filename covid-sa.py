@@ -1,108 +1,81 @@
-from scipy.optimize import curve_fit, fsolve
-import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import requests
 import os.path
 from time import time
-
-def fit_curve(days, cases, curvetype='exponential'):
-    if curvetype == 'exponential':
-        return curve_fit(exponential_model, days, cases)
-    elif curvetype == 'logistic':
-        initial_guess = 4, 100, 25000
-        return curve_fit(logistic_model, days, cases, p0=initial_guess, maxfev=9999)
-
-def extrapolate(currmodel, days, popt, advance_days):
-    pcent_needs_ic = 0.05
-    models = {'logistic':logistic_model, 'exponential':exponential_model,
-              'simple_exp':simple_exp}
-    fit_y, needs_ic = [], []
-
-    for d in days:
-        fit_y.append(models[currmodel](d, *popt))
-
-    extrapolate_x = list(range(days[-1], days[-1]+advance_days+1))
-    extrapolate_y = []
-    for x in extrapolate_x:
-        newy = int(models[currmodel](x, *popt))
-        extrapolate_y.append(newy)
-    return fit_y, extrapolate_x, extrapolate_y, needs_ic
-
-def simple_exp(x, a, b, c):
-    return a**x + b*x + c
+import seaborn as sns
+from scipy.optimize import curve_fit
 
 def logistic_model(x, a, b, c):
     return c / (1 + np.exp(-(x - b) / a))
 
-def exponential_model(x, a, b, c):
-    return a*np.exp(b*(x-c))
+def exponential_model(x, a, b, c, d, e):
+    return a * x**4 + b * x**3 + c * x**2 + d * x + e
 
-def plot(indata):
-    advance_days = 7
-
-    cases = list(indata.values())
-    dates = list(indata.keys())
-    days = list(range(len(cases)))
-
-    #currmodel = 'logistic'
-    currmodel = 'exponential'
-    #currmodel = 'simple_exp'
-
-    #logi_popt, logi_pcov = fit_curve(days, cases, 'logistic')
-    expo_popt, expo_pcov = fit_curve(days, cases, 'exponential')
-
-    #logi_fit_y, logi_extrap_x, logi_extrap_y, needs_ic = extrapolate('logistic', days, logi_popt, advance_days)
-    expo_fit_y, expo_extrap_x, expo_extrap_y, needs_ic = extrapolate('exponential', days, expo_popt, advance_days)
-
-    fig, ax = plt.subplots()
-
-    # actual data
-    ax.plot(dates, cases, '-bx', label='Cases')
-
-    #logistic curve
-    #ax.plot(days, logi_fit_y, '--g', label='Logistic fitted curve')
-    ax.plot(logi_extrap_x, logi_extrap_y, '--xg', label='Exponential extrapolated')
-    # label extrapolated points
-    '''
-    for num, x in enumerate(logi_extrap_x[1:]): #skip first extrap as it overlaps last datum
-        y = logi_extrap_y[num+1]
-        ax.text(x + 0.2, y, str(y), va='center')
-    '''
-
-    fig.autofmt_xdate()
-    plt.xlabel('Date')
-    plt.ylabel('Cases')
-    plt.legend(loc='best')
-    plt.tight_layout()
-    plt.grid(which='both')
-    plt.show()
+def plot(data):
+    data['14 Day Average'] = data.Cases.rolling(14, center=True).mean()
+    data.plot()
+    # sns.lmplot(x='Date', y='Cases', data=data, order=4)
+    # sns.lineplot(data=data, dashes=False)
+    plt.grid()
+    #plt.show()
+    
+    figure = plt.gcf()
+    figure.set_size_inches(16.8, 10.5)
+    plt.savefig('covid-sa-current.png', bbox_inches='tight')
 
 def fetch_data():
-    filetime = os.path.getmtime('daily-stats.csv')
-    if filetime < time() - 3600:
-        r = requests.get('https://raw.githubusercontent.com/M3IT/COVID-19_Data/master/Data/COVID_AU_state.csv')
-        if r.status_code == 200:
-            with open('daily-stats.csv', 'w') as outfile:
-                outfile.write(r.text)
+    refresh = 3600 * 2
+    if not os.path.exists('daily-stats.csv') or os.path.getmtime('daily-stats.csv') < time() - refresh:
+        print('Downloading latest updates...', end='')
+        try:
+            r = requests.get('https://raw.githubusercontent.com/M3IT/COVID-19_Data/master/Data/COVID_AU_state.csv')
+        except Exception as err:
+            print(f'unable to retrieve file - {err}')
         else:
-            print('Failed to retrieve data.')
+            if r.status_code == 200:
+                print('done.')
+                with open('daily-stats.csv', 'w') as outfile:
+                    outfile.write(r.text)
+            else:
+                print('Failed to retrieve data.')
 
     with open('daily-stats.csv', 'r') as indata:
         return [x.strip() for x in indata.readlines()]
 
 def process_data(indata):
+    window_size = 7
     data = {}
     targ_state = 'South Australia'
-    filtered = [x for x in indata if targ_state in x and '2022' in x]
+    filtered = [x for x in indata if targ_state in x]
+    filtered = filtered[700:]
     for f in filtered:
         splitline = f.split(',')
-        data[splitline[0]] = int(splitline[3])
-    return data
+        data[splitline[0]] = (int(splitline[3]), int(splitline[5]))
+
+    series = pd.DataFrame()
+    #series['Date'] = list(range(len(data.keys()))) # data.keys()
+    series['Date'] = data.keys()
+    series['Date'] = pd.to_datetime(series['Date'])
+    series.set_index('Date', inplace=True)
+    series['Cases'] = [x[0] for x in data.values()]
+    #series['Deaths'] = [x[1] for x in data.values()]
+
+    '''
+    x = list(range(len(data.keys())))
+    y = [x[0] for x in data.values()]
+    popt, _ = curve_fit(exponential_model, x, y)
+    curve = [exponential_model(x_val, *popt) for x_val in x]
+    series['Fitted Curve'] = curve
+    '''
+
+    return series
 
 def main():
     d = fetch_data()
-    d = process_data(d)
-    plot(d)
+    if d:
+        s = process_data(d)
+        plot(s)
 
 if __name__ == '__main__':
     main()

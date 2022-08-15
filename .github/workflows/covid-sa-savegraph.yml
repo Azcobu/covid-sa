@@ -1,0 +1,41 @@
+name: covid-sa-savegraph
+
+on:
+  schedule:
+    - cron: '0 0,1,2,3,4,5,6,7,8,9,19,20,21,22,23 * * *' # runs hourly 7pm-9am
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: checkout repo content
+        uses: actions/checkout@v2 # checkout the repository content to github runner
+
+      - name: setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.10' # install the python version needed
+          
+      - name: install python packages
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: execute py script # run covid-sa.py to get the latest data
+        env: 
+          EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          EMAIL_RECIPIENT: ${{ secrets.EMAIL_RECIPIENT }}
+        run: python covid-sa.py
+          
+      - name: commit files
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A
+          git commit -m "Update data" -a
+      - name: push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: main
