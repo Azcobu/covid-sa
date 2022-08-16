@@ -2,7 +2,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import requests
 import os.path
-from time import time
 import seaborn as sns
 from scipy.optimize import curve_fit
 
@@ -25,27 +24,21 @@ def plot(data):
     plt.savefig('covid-sa-current.png', bbox_inches='tight')
 
 def fetch_data():
-    refresh = 3600 * 2
-    if not os.path.exists('daily-stats.csv') or os.path.getmtime('daily-stats.csv') < time() - refresh:
-        print('Downloading latest updates...', end='')
-        try:
-            r = requests.get('https://raw.githubusercontent.com/M3IT/COVID-19_Data/master/Data/COVID_AU_state.csv')
-        except Exception as err:
-            print(f'unable to retrieve file - {err}')
+    print('Downloading latest updates...', end='')
+    try:
+        r = requests.get('https://raw.githubusercontent.com/M3IT/COVID-19_Data/master/Data/COVID_AU_state.csv', stream=True)
+    except Exception as err:
+        print(f'unable to retrieve file - {err}')
+    else:
+        if r.status_code == 200:
+            print('done.')
+            return r.content.decode('utf-8')
         else:
-            if r.status_code == 200:
-                print('done.')
-                with open('daily-stats.csv', 'w') as outfile:
-                    outfile.write(r.text)
-            else:
-                print('Failed to retrieve data.')
-
-    with open('daily-stats.csv', 'r') as indata:
-        return [x.strip() for x in indata.readlines()]
+            print('Failed to retrieve data.')
 
 def process_data(indata):
-    window_size = 7
     data = {}
+    indata = [x.strip() for x in indata.split('\n')]
     targ_state = 'South Australia'
     filtered = [x for x in indata if targ_state in x]
     filtered = filtered[700:]
@@ -60,7 +53,6 @@ def process_data(indata):
     series.set_index('Date', inplace=True)
     series['Cases'] = [x[0] for x in data.values()]
     #series['Deaths'] = [x[1] for x in data.values()]
-
     '''
     x = list(range(len(data.keys())))
     y = [x[0] for x in data.values()]
@@ -68,7 +60,6 @@ def process_data(indata):
     curve = [exponential_model(x_val, *popt) for x_val in x]
     series['Fitted Curve'] = curve
     '''
-
     return series
 
 def main():
