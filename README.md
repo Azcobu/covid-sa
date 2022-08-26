@@ -6,4 +6,4 @@ An automatically-updated graph showing the progress of the Covid pandemic in Sou
 
 ![Covid-SA](covid-sa-current.png?raw=true)
 
-Data sourced from [github.com/M3IT/COVID-19_Data](https://github.com/M3IT/COVID-19_Data) and [covid19data.com.au](https://covid19data.com.au).
+Data sourced from [https://covidlive.com.au](https://covidlive.com.au).
