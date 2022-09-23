@@ -2,7 +2,7 @@ name: covid-sa-savegraph
 
 on:
   schedule:
-    - cron: '30 */2 * * *' # runs on 30 min offset for SA every 2 hours
+    - cron: '30 8-10 * * 5' # runs from 6pm to 8pm ADL time on Friday
   workflow_dispatch:
 
 jobs:
