@@ -14,7 +14,10 @@ def exponential_model(x, a, b, c, d, e):
     return a * x**4 + b * x**3 + c * x**2 + d * x + e
 
 def plot(data):
-    data.plot()
+    lastdate = data.iloc[-1]
+    lastdate = str(lastdate.name).split(' ')[0]
+    txt = f'South Australian Weekly Covid Cases (last updated {lastdate})'
+    data.plot(title=txt)
     plt.grid()
     #plt.show()
     
